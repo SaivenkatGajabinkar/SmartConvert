@@ -1,0 +1,123 @@
+package com.smartconvert.backend.service;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.smartconvert.backend.model.ConversionResultEntity;
+import com.smartconvert.backend.model.FileEntity;
+import com.smartconvert.backend.repository.ConversionResultRepository;
+import com.smartconvert.backend.repository.FileRepository;
+
+import jakarta.annotation.PostConstruct;
+
+@Service
+public class StorageService {
+
+    @Value("${file.upload-dir:uploads}")
+    private String uploadDir;
+
+    @Autowired
+    private FileRepository fileRepository;
+
+    @Autowired
+    private ConversionResultRepository conversionResultRepository;
+
+    @PostConstruct
+    public void init() {
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+        } catch (IOException e) {
+            throw new RuntimeException("Could not initialize upload directory!");
+        }
+    }
+
+    public FileEntity storeFile(MultipartFile file) throws IOException {
+        String filename = file.getOriginalFilename();
+        String extension = "";
+        if (filename != null && filename.contains(".")) {
+            extension = filename.substring(filename.lastIndexOf("."));
+        }
+
+        FileEntity entity = new FileEntity();
+        entity.setOriginalFilename(filename);
+        entity.setMimeType(file.getContentType());
+        fileRepository.save(entity);
+
+        String storedFilename = entity.getId() + extension;
+        Path targetPath = Paths.get(uploadDir).resolve(storedFilename);
+        Files.copy(file.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+        entity.setStoragePath(targetPath.toString());
+        return fileRepository.save(entity);
+    }
+    
+    public ConversionResultEntity storeConvertedFile(String sourceId, File convertedFile, String format) {
+        ConversionResultEntity entity = new ConversionResultEntity();
+        entity.setSourceFileId(sourceId);
+        entity.setOutputFormat(format);
+        entity.setOutputFilename(convertedFile.getName());
+        entity.setStoragePath(convertedFile.getAbsolutePath());
+        return conversionResultRepository.save(entity);
+    }
+
+    public File getFile(String id) {
+        Optional<FileEntity> fileOpt = fileRepository.findById(id);
+        if (fileOpt.isPresent()) {
+            return new File(fileOpt.get().getStoragePath());
+        }
+        return null;
+    }
+
+    public File getConvertedFile(String resultId) {
+        Optional<ConversionResultEntity> resultOpt = conversionResultRepository.findById(resultId);
+        if (resultOpt.isPresent()) {
+            return new File(resultOpt.get().getStoragePath());
+        }
+        return null;
+    }
+
+    // Run every minute
+    @Scheduled(fixedRate = 60000)
+    public void cleanupOldFiles() {
+        LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
+        
+        List<FileEntity> allFiles = new ArrayList<>();
+        fileRepository.findAll().forEach(f -> {
+            if (f.getUploadedAt().isBefore(tenMinutesAgo)) {
+                allFiles.add(f);
+            }
+        });
+
+        for (FileEntity file : allFiles) {
+            try {
+                Files.deleteIfExists(Paths.get(file.getStoragePath()));
+                fileRepository.delete(file);
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
+
+        List<ConversionResultEntity> oldResults = conversionResultRepository.findByConvertedAtBefore(tenMinutesAgo);
+        for (ConversionResultEntity res : oldResults) {
+            try {
+                Files.deleteIfExists(Paths.get(res.getStoragePath()));
+                conversionResultRepository.delete(res);
+            } catch (IOException e) {
+                // Ignore
+            }
+        }
+    }
+}
