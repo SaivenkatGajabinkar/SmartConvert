@@ -26,7 +26,12 @@ function App() {
       setFileData(res.data);
       setResults(null);
     } catch (err) {
-      setError(err.response?.data || 'Failed to upload file');
+      console.error('Upload error:', err);
+      const errorData = err.response?.data;
+      const errorMessage = typeof errorData === 'object' 
+        ? (errorData.message || JSON.stringify(errorData)) 
+        : (errorData || 'Failed to upload file');
+      setError(errorMessage);
     }
   };
 

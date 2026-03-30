@@ -9,6 +9,8 @@ RUN mvn clean package -DskipTests
 # Run stage using lightweight Java 17
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
+# Create directories for files and database with permissions
+RUN mkdir -p uploads data && chmod 777 uploads data
 COPY --from=build /app/target/*.jar app.jar
 
 # Expose the internal port
