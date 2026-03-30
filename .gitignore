@@ -1,0 +1,26 @@
+# Build artifacts
+target/
+dist/
+build/
+*.jar
+*.war
+
+# Dependencies
+node_modules/
+.npm/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Local data
+data/
+uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
