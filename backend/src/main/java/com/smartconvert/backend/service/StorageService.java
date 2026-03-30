@@ -45,6 +45,12 @@ public class StorageService {
     }
 
     public FileEntity storeFile(MultipartFile file) throws IOException {
+        // Emergency Check: Make sure the cupboard (folder) exists!
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
         String filename = file.getOriginalFilename();
         String extension = "";
         if (filename != null && filename.contains(".")) {
@@ -54,11 +60,22 @@ public class StorageService {
         FileEntity entity = new FileEntity();
         entity.setOriginalFilename(filename);
         entity.setMimeType(file.getContentType());
-        fileRepository.save(entity);
+        
+        // Save to database
+        try {
+            entity = fileRepository.save(entity);
+        } catch (Exception e) {
+            throw new IOException("Database Error: Could not save file info. " + e.getMessage());
+        }
 
         String storedFilename = entity.getId() + extension;
-        Path targetPath = Paths.get(uploadDir).resolve(storedFilename);
-        Files.copy(file.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Path targetPath = uploadPath.resolve(storedFilename);
+        
+        try {
+            Files.copy(file.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            throw new IOException("Storage Error: Could not save file to disk. " + e.getMessage());
+        }
 
         entity.setStoragePath(targetPath.toString());
         return fileRepository.save(entity);
