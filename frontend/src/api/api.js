@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // In local development, the vite proxy handles /api requests.
-const baseURL = '';
+const baseURL = ' https://smartconvert-backend-ge44.onrender.com';
 
 const api = axios.create({
   baseURL: baseURL
