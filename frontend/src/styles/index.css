@@ -492,3 +492,16 @@ h1.display-4 {
   background: rgba(255, 255, 255, 0.03) !important;
   border: 1px solid var(--card-border);
 }
+
+/* Override Bootstrap text colors for dark theme visibility */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-secondary {
+  color: #cbd5e1 !important;
+}
+
+.text-white {
+  color: var(--text-main) !important;
+}
