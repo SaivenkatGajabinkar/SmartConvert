@@ -1,12 +1,13 @@
-import React from 'react';
-import { Button, Card, Row, Col } from 'react-bootstrap';
+import { Button, Row, Col } from 'react-bootstrap';
 import { BsCheckCircleFill, BsDownload, BsFileEarmarkText } from 'react-icons/bs';
-import { baseURL } from '../api';
+import { baseURL } from '../api/api';
 
 const ResultsDashboard = ({ results, onReset }) => {
+
   const downloadFile = (id) => {
-    window.location.href = `${baseURL}/api/download/${id}`;
+    window.location.assign(`${baseURL}/api/download/${id}`);
   };
+
 
   return (
     <div className="results-dashboard px-4 pb-4">
@@ -18,22 +19,25 @@ const ResultsDashboard = ({ results, onReset }) => {
 
       <Row className="justify-content-center px-lg-4">
         {results?.map((res) => (
-          <Col md={12} key={res.id} className="mb-3">
-            <div className="result-card p-4 d-flex flex-row align-items-center justify-content-between">
-              <div className="d-flex align-items-center">
-                 <div className="bg-light p-3 rounded-circle me-4 shadow-sm">
-                   <BsFileEarmarkText className="text-primary" style={{ fontSize: '1.8rem' }} />
-                 </div>
-                 <div>
-                    <h5 className="mb-1 fw-bold text-dark">{res.outputFormat} Format</h5>
-                    <small className="text-secondary text-truncate d-block" style={{maxWidth: '220px'}}>{res.outputFilename}</small>
-                 </div>
+          <Col md={12} key={res.id} className="mb-4">
+            <div className="result-card p-4 rounded-3 shadow-sm">
+              <div className="d-flex flex-row align-items-center justify-content-between mb-4">
+                <div className="d-flex align-items-center">
+                   <div className="bg-light-op p-3 rounded-circle me-4 shadow-sm">
+                     <BsFileEarmarkText className="text-primary" style={{ fontSize: '1.8rem' }} />
+                   </div>
+                   <div>
+                      <h5 className="mb-1 fw-bold text-white">{res.outputFormat} Format</h5>
+                      <small className="text-secondary text-truncate d-block" style={{maxWidth: '220px'}}>{res.outputFilename}</small>
+                   </div>
+                </div>
+                <div>
+                  <Button variant="primary" className="btn-gradient rounded-pill d-flex align-items-center gap-2 shadow-sm" onClick={() => downloadFile(res.id)}>
+                     <BsDownload /> Download
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Button variant="primary" className="btn-gradient rounded-pill d-flex align-items-center gap-2 shadow-sm" onClick={() => downloadFile(res.id)}>
-                   <BsDownload /> Download
-                </Button>
-              </div>
+
             </div>
           </Col>
         ))}

@@ -19,25 +19,26 @@ const UploadZone = ({ onUpload }) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleChange = (e) => {
     e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(Array.from(e.target.files));
     }
   };
 
-  const handleFile = (file) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setError("File size exceeds 10MB limit.");
-      return;
+  const handleFiles = (files) => {
+    const file = files[0];
+    if (file.size <= 50 * 1024 * 1024) {
+        setError('');
+        onUpload([file]);
+    } else {
+        setError("File exceeds 50MB limit.");
     }
-    setError('');
-    onUpload(file);
   };
 
   return (
@@ -56,9 +57,11 @@ const UploadZone = ({ onUpload }) => {
         id="file-upload" 
       />
       <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'block' }}>
-        <BsCloudUpload className="upload-icon bounce mb-3" />
+        <BsCloudUpload className="upload-zone-icon mb-3" />
         <h3 className="mb-2 fw-semibold">Click or drag & drop to upload</h3>
-        <p className="text-muted">Supports PDF, Images, Excel, Word, CSV (Max 10MB)</p>
+        <p className="text-muted">
+            Supports PDF, Images, Excel, Word (Max 50MB)
+        </p>
       </label>
       {error && <div className="text-danger mt-2 fw-semibold">{error}</div>}
     </div>

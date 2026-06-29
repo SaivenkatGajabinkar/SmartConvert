@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smartconvert_backend
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount the strictly protected data and uploads folders from the project root
+      # into the container so the built-in database and files persist across restarts.
+      - ../data:/app/data
+      - ../uploads:/app/uploads
+    env_file:
+      - .env
+    restart: unless-stopped

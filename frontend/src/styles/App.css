@@ -1,0 +1,89 @@
+/* Professional Light Theme for SmartConvert */
+
+:root {
+  --primary: #2563eb;
+  --accent: #7c3aed;
+  --bg-light: #f8fafc;
+  --card-bg: #ffffff;
+  --border-light: #e2e8f0;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+}
+
+.app-container {
+  min-height: 100vh;
+  background: var(--bg-gradient);
+  color: var(--text-main);
+  padding-top: 5rem;
+}
+
+.glass-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+.brand-text {
+  font-weight: 800;
+  letter-spacing: -2px;
+  background: linear-gradient(to right, #2563eb, #7c3aed);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #2563eb, #7c3aed, #db2777);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+.btn-format {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-format:hover {
+  background: #eff6ff;
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -8px rgba(37, 99, 235, 0.2);
+}
+
+.btn-format.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.summary-box {
+    background: #f1f5f9;
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    text-align: left;
+}
+
+.ai-analyzing {
+  color: var(--primary);
+  font-weight: 500;
+}

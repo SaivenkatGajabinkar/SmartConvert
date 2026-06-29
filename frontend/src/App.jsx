@@ -1,37 +1,76 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Spinner } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+import Navbar from './components/SmartNavbar';
 import UploadZone from './components/UploadZone';
 import ResultsDashboard from './components/ResultsDashboard';
 import SummarizerBox from './components/SummarizerBox';
-import api from './api';
-import { BsMagic, BsStars } from 'react-icons/bs';
+import HistoryDashboard from './components/HistoryDashboard';
+import api from './api/api';
+import './styles/App.css';
 
 function App() {
   const [fileData, setFileData] = useState(null);
+  const [results, setResults] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedFormats, setSelectedFormats] = useState([]);
   const [summarizing, setSummarizing] = useState(false);
   const [summary, setSummary] = useState(null);
-  const [results, setResults] = useState(null);
-  const [error, setError] = useState('');
+  // Initialize state based on current URL hash to support direct loading & refreshes
+  const getInitialTab = () => {
+    const hash = window.location.hash;
+    if (hash === '#/history') return 'history';
+    return 'converter';
+  };
 
-  const handleUpload = async (file) => {
+  const [activeTab, setActiveTab] = useState(getInitialTab());
+
+  // Listen to popstate event (browser back/forward button clicks)
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      if (hash === '#/history') {
+        setActiveTab('history');
+      } else {
+        setActiveTab('converter');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Update tab state and browser history cleanly
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    const path = tab === 'history' ? '#/history' : '#/';
+    if (window.location.hash !== path) {
+      window.history.pushState({ tab }, '', path);
+    }
+  };
+
+  const handleUpload = async (files) => {
+    const file = files[0];
+    if (!file) return;
+
     setError('');
+    setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const res = await api.post('/api/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const res = await api.post('/api/upload', formData);
       setFileData(res.data);
       setResults(null);
+      setSummary(null);
+      setSelectedFormats([]);
     } catch (err) {
-      console.error('Upload error:', err);
       const errorData = err.response?.data;
-      const errorMessage = typeof errorData === 'object' 
-        ? (errorData.message || JSON.stringify(errorData)) 
-        : (errorData || 'Failed to upload file');
-      setError(errorMessage);
+      const errorMsg = typeof errorData === 'object' ? JSON.stringify(errorData) : (errorData || err.message);
+      setError(`Upload failed: ${errorMsg}`);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -45,7 +84,7 @@ function App() {
         formats: formats
       });
       setResults(res.data);
-    } catch (err) {
+    } catch {
       setError('Conversion failed. Please try again.');
     } finally {
       setConverting(false);
@@ -59,9 +98,11 @@ function App() {
     setError('');
     try {
       const res = await api.post(`/api/summarize/${fileData.fileId}`);
-      setSummary(res.data.summary);
+      setSummary(res.data); // Store the entire {summary, type} object
     } catch (err) {
-      setError('AI Summarization failed. Please check your API key.');
+      const errorData = err.response?.data;
+      const errorMsg = typeof errorData === 'object' ? JSON.stringify(errorData) : (errorData || err.message);
+      setError(`AI Summarization failed: ${errorMsg}`);
     } finally {
       setSummarizing(false);
     }
@@ -70,90 +111,122 @@ function App() {
   const handleReset = () => {
     setFileData(null);
     setResults(null);
-    setSummary(null);
     setConverting(false);
     setSummarizing(false);
+    setSummary(null);
     setError('');
+    setSelectedFormats([]);
+    handleTabChange('converter');
+  };
+
+  const toggleFormat = (fmt) => {
+    setSelectedFormats(prev => 
+      prev.includes(fmt) ? prev.filter(f => f !== fmt) : [...prev, fmt]
+    );
   };
 
   return (
-    <div className="app-container">
-      <Container>
-        <Row className="justify-content-center mb-5 text-center">
-          <Col md={8}>
-            <h1 className="display-4 fw-bold mb-3">
-              <span className="brand-text">SmartFile Converter.com</span>
-            </h1>
-            <p className="lead text-muted">The intelligent, multi-format file conversion engine.</p>
-          </Col>
-        </Row>
+    <div className="app-dark">
+      <div className="pastel-blobs">
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="blob blob-3"></div>
+        <div className="blob blob-4"></div>
+      </div>
+      <Navbar activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      <main className="py-5">
+        <Container>
+          <Row className="justify-content-center">
+            <Col lg={10} xl={8}>
+              <div className="glass-card p-4 p-md-5">
+                {activeTab === 'history' ? (
+                  <HistoryDashboard />
+                ) : (
+                  <>
+                    <div className="text-center mb-5">
+                      <h1 className="display-4 fw-bold mb-3 gradient-text">SmartConvert</h1>
+                      <p className="lead text-muted">A premium, high-performance file conversion suite</p>
+                    </div>
 
-        <Row className="justify-content-center">
-          <Col md={10} lg={8}>
-            <div className="glass-card">
-              {error && <div className="alert alert-danger">{error}</div>}
-              
-              {!fileData && !results && (
-                <UploadZone onUpload={handleUpload} />
-              )}
-
-              {fileData && !results && !converting && (
-                 <div className="text-center">
-                    <h4 className="mb-4">File Ready: <strong>{fileData.originalName}</strong></h4>
-                    {fileData.availableFormats && fileData.availableFormats.length > 0 ? (
-                      <>
-                        <h5 className="mb-3 text-secondary">Recommended output: <span className="badge bg-success">{fileData.recommendedFormat}</span></h5>
-                        
-                        <div className="format-grid">
-                           {fileData.availableFormats.map(fmt => (
-                             <button key={fmt} className="btn-format" onClick={() => handleConvert([fmt])}>
-                               <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Convert to</span>
-                               <span style={{fontSize: '1.2rem'}}>{fmt}</span>
-                             </button>
-                           ))}
-                        </div>
-
-                        <div className="mt-5 d-flex flex-column flex-md-row justify-content-center gap-3 align-items-center border-top pt-4">
-                            <button className="btn btn-outline-secondary rounded-pill px-4 shadow-sm" onClick={() => handleConvert(fileData.availableFormats)}>
-                                Convert to All Formats
-                            </button>
-                            <button 
-                              className="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2 shadow-sm" 
-                              onClick={handleSummarize}
-                              disabled={summarizing}
-                              style={{background: 'var(--primary)', border: 'none'}}
-                            >
-                              <BsStars /> {summarizing ? 'Analyzing...' : 'AI Summarize'}
-                            </button>
-                        </div>
-                        
-                        <div className="mt-4">
-                           <SummarizerBox summary={summary} loading={summarizing} />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="alert alert-warning">No conversion formats supported for this file type.</div>
-                    )}
+                    {error && <div className="alert alert-danger mb-4">{error}</div>}
                     
-                    <button className="btn btn-link text-muted mt-3" onClick={handleReset}>Start over</button>
-                 </div>
-              )}
+                    {!fileData && !results && !converting && (
+                      <UploadZone 
+                        onUpload={handleUpload} 
+                        loading={uploading} 
+                        multiple={false} 
+                      />
+                    )}
 
-              {converting && (
-                <div className="text-center py-5">
-                  <Spinner animation="border" variant="primary" style={{ width: '3rem', height: '3rem' }} />
-                  <h4 className="mt-4 text-primary">Converting your file...</h4>
-                  <p className="text-muted">Applying smart transformations. Please wait.</p>
-                </div>
-              )}
+                    {fileData && !results && !converting && (
+                      <div className="animate-fade-in">
+                        <div className="d-flex justify-content-between align-items-center mb-4 p-3 bg-light-op rounded-4">
+                            <div className="d-flex align-items-center">
+                                <div className="file-icon-sm me-3">📄</div>
+                                <h5 className="mb-0">{fileData.originalName}</h5>
+                            </div>
+                            <button className="btn btn-sm btn-outline-danger" onClick={handleReset}>Change File</button>
+                        </div>
 
-              {results && !converting && (
-                <ResultsDashboard results={results} onReset={handleReset} />
-              )}
-            </div>
-          </Col>
-        </Row>
-      </Container>
+                        <div className="mb-5">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5 className="mb-0">Selected Formats:</h5>
+                                {selectedFormats.length > 0 && (
+                                    <button 
+                                        className="btn btn-primary rounded-pill px-4 shadow"
+                                        onClick={() => handleConvert(selectedFormats)}
+                                    >
+                                        CONVERT NOW
+                                    </button>
+                                )}
+                            </div>
+                            <div className="format-grid">
+                                {fileData.availableFormats.map(fmt => (
+                                    <button 
+                                        key={fmt} 
+                                        className={`btn-format ${selectedFormats.includes(fmt) ? 'active' : ''}`} 
+                                        onClick={() => toggleFormat(fmt)}
+                                    >
+                                        <span className="small text-muted">{selectedFormats.includes(fmt) ? 'Selected' : 'Target'}</span>
+                                        <span className="fw-bold">{fmt}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <SummarizerBox 
+                            onSummarize={handleSummarize} 
+                            loading={summarizing} 
+                            result={summary} 
+                        />
+
+                        <div className="alert alert-info py-4 rounded-4 text-center">
+                            <h5 className="mb-2">File Ready for Conversion</h5>
+                            <p className="mb-0 text-muted">Choose your target formats above to proceed.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {(converting || results) && (
+                      <ResultsDashboard 
+                        results={results} 
+                        loading={converting} 
+                        onReset={handleReset}
+                        originalName={fileData?.originalName}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            </Col>
+          </Row>
+        </Container>
+      </main>
+
+      
+      <footer className="py-4 text-center text-muted">
+      </footer>
     </div>
   );
 }
