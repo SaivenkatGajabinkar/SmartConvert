@@ -146,7 +146,7 @@ function App() {
                   <>
                     <div className="text-center mb-5">
                       <h1 className="display-4 fw-bold mb-3 gradient-text">SmartConvert</h1>
-                      <p className="lead text-muted">A premium, high-performance file conversion suite</p>
+                      <p className="lead text-muted">A multi File converting platform</p>
                     </div>
 
                     {error && <div className="alert alert-danger mb-4">{error}</div>}
