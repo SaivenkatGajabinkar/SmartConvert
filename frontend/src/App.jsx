@@ -84,8 +84,10 @@ function App() {
         formats: formats
       });
       setResults(res.data);
-    } catch {
-      setError('Conversion failed. Please try again.');
+    } catch (err) {
+      const errorData = err.response?.data;
+      const errorMsg = typeof errorData === 'object' ? (errorData.message || JSON.stringify(errorData)) : (errorData || err.message);
+      setError(`Conversion failed: ${errorMsg || 'Please try again.'}`);
     } finally {
       setConverting(false);
     }

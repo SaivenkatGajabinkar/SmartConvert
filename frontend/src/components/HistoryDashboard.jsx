@@ -25,8 +25,15 @@ const HistoryDashboard = () => {
     fetchHistory();
   }, []);
 
-  const handleDownload = (id) => {
-    window.location.href = `${baseURL}/api/download/${id}`;
+  const handleDownload = (id, filename) => {
+    const url = `${baseURL}/api/download/${id}`;
+    const link = document.createElement('a');
+    link.href = url;
+    if (filename) link.download = filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const formatDate = (dateStr) => {
@@ -111,7 +118,7 @@ const HistoryDashboard = () => {
                       variant="primary" 
                       size="sm" 
                       className="btn-gradient rounded-pill px-3 d-inline-flex align-items-center gap-1.5 shadow-sm"
-                      onClick={() => handleDownload(item.id)}
+                      onClick={() => handleDownload(item.id, item.outputFilename)}
                     >
                       <BsDownload size={13} /> Download
                     </Button>

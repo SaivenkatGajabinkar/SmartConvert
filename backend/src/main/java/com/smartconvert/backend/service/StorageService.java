@@ -87,17 +87,21 @@ public class StorageService {
     }
     
     public ConversionResultEntity storeConvertedFile(String sourceId, File convertedFile, String format) {
+        return storeConvertedFile(sourceId, convertedFile, format, convertedFile.getName());
+    }
+
+    public ConversionResultEntity storeConvertedFile(String sourceId, File convertedFile, String format, String friendlyFilename) {
         ConversionResultEntity entity = new ConversionResultEntity();
         entity.setSourceFileId(sourceId);
         entity.setOutputFormat(format);
-        entity.setOutputFilename(convertedFile.getName());
+        entity.setOutputFilename(friendlyFilename != null && !friendlyFilename.isBlank() ? friendlyFilename : convertedFile.getName());
         entity.setStoragePath(convertedFile.getAbsolutePath());
         return conversionResultRepository.save(entity);
     }
 
     public File getFile(String id) {
         Optional<FileEntity> fileOpt = fileRepository.findById(id);
-        if (fileOpt.isPresent()) {
+        if (fileOpt.isPresent() && fileOpt.get().getStoragePath() != null) {
             return new File(fileOpt.get().getStoragePath());
         }
         return null;
@@ -105,19 +109,26 @@ public class StorageService {
 
     public File getConvertedFile(String resultId) {
         Optional<ConversionResultEntity> resultOpt = conversionResultRepository.findById(resultId);
-        if (resultOpt.isPresent()) {
+        if (resultOpt.isPresent() && resultOpt.get().getStoragePath() != null) {
             return new File(resultOpt.get().getStoragePath());
         }
         return null;
     }
+
     public Resource loadAsResource(String resultId) {
         try {
             Optional<ConversionResultEntity> resultOpt = conversionResultRepository.findById(resultId);
             if (resultOpt.isPresent()) {
-                Path file = resolvedUploadPath.resolve(Paths.get(resultOpt.get().getStoragePath()).getFileName());
-                Resource resource = new org.springframework.core.io.UrlResource(file.toUri());
-                if (resource.exists() || resource.isReadable()) {
-                    return resource;
+                String storagePath = resultOpt.get().getStoragePath();
+                if (storagePath != null) {
+                    Path directPath = Paths.get(storagePath);
+                    if (Files.exists(directPath) && Files.isReadable(directPath)) {
+                        return new org.springframework.core.io.UrlResource(directPath.toUri());
+                    }
+                    Path fallback = resolvedUploadPath.resolve(directPath.getFileName());
+                    if (Files.exists(fallback) && Files.isReadable(fallback)) {
+                        return new org.springframework.core.io.UrlResource(fallback.toUri());
+                    }
                 }
             }
             return null;

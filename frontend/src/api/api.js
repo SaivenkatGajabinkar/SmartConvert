@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-// In local development, the vite proxy handles /api requests.
-const baseURL = ' https://smartconvert-backend-ge44.onrender.com';
+// Support VITE_API_URL if configured, or default to production Render backend
+const rawBaseURL = import.meta.env.VITE_API_URL || 'https://smartconvert-backend-ge44.onrender.com';
+const baseURL = rawBaseURL ? rawBaseURL.trim().replace(/\/+$/, '') : '';
 
 const api = axios.create({
-  baseURL: baseURL
+  baseURL: baseURL,
+  timeout: 60000, // 60s timeout to accommodate Render cold starts
 });
 
-// For multipart uploads, we'll override the header where needed
 export default api;
 export { baseURL };
+
