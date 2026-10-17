@@ -1,16 +1,24 @@
-# React + Vite
+# SmartConvert Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The client-side interface for **SmartConvert**, a modern multi-file conversion and AI document summarization platform.
 
-Currently, two official plugins are available:
+## Tech Stack
+- **Framework:** React 19 + Vite
+- **Styling:** Vanilla CSS design system with dark glassmorphism (`index.css`) + React Bootstrap
+- **Icons:** React Icons (`react-icons/bs`)
+- **HTTP Client:** Axios (`api.js`)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Project Structure
+- `src/components/SmartNavbar.jsx`: Glassmorphic navigation bar with Home and History navigation.
+- `src/components/UploadZone.jsx`: Drag-and-drop file upload zone with 50MB validation.
+- `src/components/ResultsDashboard.jsx`: Converted file cards, single download, and batch download actions.
+- `src/components/SummarizerBox.jsx`: AI document summarizer (Google Gemini) and offline fallback display.
+- `src/components/HistoryDashboard.jsx`: Real-time audit trail and table of recent conversions.
+- `src/api/api.js`: Centralized Axios instance with automatic Render backend fallback and timeout handling.
 
-## React Compiler
+## Available Scripts
+- `npm run dev`: Starts the local development server (http://localhost:5173).
+- `npm run build`: Bundles the production build into the `dist/` directory.
+- `npm run lint`: Runs ESLint to verify code quality.
+- `npm run preview`: Previews the production build locally.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
