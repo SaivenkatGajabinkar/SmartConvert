@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Spinner, Badge } from 'react-bootstrap';
-import { BsDownload, BsClockHistory, BsFileEarmarkCheck, BsTrash } from 'react-icons/bs';
+import { BsDownload, BsClockHistory } from 'react-icons/bs';
 import api, { baseURL } from '../api/api';
 
+/**
+ * HistoryDashboard - Displays previous file conversions stored in the database.
+ * 
+ * Features:
+ * - Fetches conversion history on mount (/api/history).
+ * - Renders a responsive glassmorphic table with format badges and timestamps.
+ * - Allows instant one-click re-downloading of any previously converted output.
+ */
 const HistoryDashboard = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Fetch conversion history from Spring Boot backend
   const fetchHistory = async () => {
     setLoading(true);
     setError('');
@@ -25,6 +34,7 @@ const HistoryDashboard = () => {
     fetchHistory();
   }, []);
 
+  // Programmatically trigger browser file download via hidden <a> tag
   const handleDownload = (id, filename) => {
     const url = `${baseURL}/api/download/${id}`;
     const link = document.createElement('a');
@@ -36,6 +46,7 @@ const HistoryDashboard = () => {
     link.remove();
   };
 
+  // Human-readable date and time formatting
   const formatDate = (dateStr) => {
     try {
       const date = new Date(dateStr);
@@ -45,6 +56,7 @@ const HistoryDashboard = () => {
     }
   };
 
+  // Visual badge color mapping for different target formats
   const getFormatBadgeColor = (fmt) => {
     const formatColors = {
       PDF: 'danger',
@@ -60,6 +72,7 @@ const HistoryDashboard = () => {
     };
     return formatColors[fmt.toUpperCase()] || 'primary';
   };
+
 
   return (
     <div className="history-dashboard animate-fade-in">
@@ -84,9 +97,9 @@ const HistoryDashboard = () => {
           <p className="text-muted mb-0">No conversions recorded yet. Get started by uploading a file!</p>
         </div>
       ) : (
-        <div className="table-responsive rounded-4 shadow-sm">
-          <Table hover className="mb-0 align-middle table-custom bg-transparent">
-            <thead className="text-secondary">
+        <div className="table-responsive history-table-wrapper rounded-4 shadow-sm">
+          <Table variant="dark" hover className="mb-0 align-middle table-custom">
+            <thead>
               <tr>
                 <th>Original File</th>
                 <th>Target Format</th>
@@ -107,10 +120,10 @@ const HistoryDashboard = () => {
                       {item.outputFormat}
                     </Badge>
                   </td>
-                  <td className="text-muted small text-truncate" style={{ maxWidth: '200px' }}>
+                  <td className="text-light small text-truncate" style={{ maxWidth: '240px' }} title={item.outputFilename}>
                     {item.outputFilename}
                   </td>
-                  <td className="text-secondary small">
+                  <td className="text-muted small">
                     {formatDate(item.convertedAt)}
                   </td>
                   <td className="text-end">

@@ -1,15 +1,42 @@
 import React from 'react';
-import { Navbar, Container, Nav, Button } from 'react-bootstrap';
-import { BsLightningFill, BsGithub, BsHouseFill, BsClockHistory, BsCompass } from 'react-icons/bs';
+import { Navbar, Container, Nav } from 'react-bootstrap';
+import { BsLightningFill, BsHouseFill, BsClockHistory } from 'react-icons/bs';
 
-const SmartNavbar = ({ activeTab, onTabChange }) => {
+/**
+ * SmartNavbar - Header Navigation Bar
+ * 
+ * Features:
+ * - Brand logo click returns to Home and resets file upload state.
+ * - Navigates between Home ("#/") and History ("#/history").
+ * - Clean glassmorphic styling matching the dark theme.
+ */
+const SmartNavbar = ({ activeTab, onTabChange, onGoHome }) => {
+  // Returns to home and resets active file state
+  const handleHomeClick = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (onGoHome) {
+      onGoHome();
+    } else {
+      onTabChange("converter");
+    }
+  };
+
+  // Navigates to history dashboard
+  const handleHistoryClick = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    onTabChange("history");
+  };
+
+
   return (
     <Navbar expand="lg" className="smart-navbar sticky-top" variant="dark">
       <Container>
         <Navbar.Brand 
-          onClick={() => onTabChange("converter")} 
+          onClick={handleHomeClick} 
           style={{ cursor: 'pointer' }}
-          className="d-flex align-items-center gap-2 logo-container"
+          className="d-flex align-items-center gap-2 logo-container text-decoration-none"
+          role="button"
+          tabIndex={0}
         >
           <div className="logo-icon-bg shadow-sm animated-logo">
             <BsLightningFill className="logo-icon" />
@@ -21,29 +48,22 @@ const SmartNavbar = ({ activeTab, onTabChange }) => {
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto align-items-center gap-lg-3 nav-links-container">
             <Nav.Link 
-              onClick={() => onTabChange("converter")} 
-              className={`nav-link-custom d-flex align-items-center gap-2 ${activeTab === 'converter' ? 'active' : ''}`}
+              as="button"
+              type="button"
+              onClick={handleHomeClick} 
+              className={`nav-link-custom d-flex align-items-center gap-2 border-0 bg-transparent ${activeTab === 'converter' ? 'active' : ''}`}
             >
               <BsHouseFill className="nav-icon" /> Home
             </Nav.Link>
             
             <Nav.Link 
-              onClick={() => onTabChange("history")} 
-              className={`nav-link-custom d-flex align-items-center gap-2 ${activeTab === 'history' ? 'active' : ''}`}
+              as="button"
+              type="button"
+              onClick={handleHistoryClick} 
+              className={`nav-link-custom d-flex align-items-center gap-2 border-0 bg-transparent ${activeTab === 'history' ? 'active' : ''}`}
             >
               <BsClockHistory className="nav-icon" /> History
             </Nav.Link>
-
-            <div className="vertical-divider d-none d-lg-block"></div>
-            
-            <Button 
-                variant="outline-light" 
-                className="rounded-pill px-4 d-flex align-items-center gap-2 btn-github shadow-sm border-white-op"
-                href="https://github.com" 
-                target="_blank"
-            >
-              <BsGithub /> GitHub
-            </Button>
           </Nav>
         </Navbar.Collapse>
       </Container>

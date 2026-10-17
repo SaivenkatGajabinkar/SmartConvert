@@ -2,8 +2,18 @@ import { Button, Row, Col } from 'react-bootstrap';
 import { BsCheckCircleFill, BsDownload, BsFileEarmarkText } from 'react-icons/bs';
 import { baseURL } from '../api/api';
 
+/**
+ * ResultsDashboard - Displays completed conversion outputs and download actions.
+ * 
+ * Features:
+ * - Direct one-click download for individual converted files.
+ * - Staggered batch download ("Download All") that spaces requests by 400ms
+ *   to avoid browser multi-download blocking.
+ * - Friendly download filenames preserved from the backend.
+ */
 const ResultsDashboard = ({ results, loading, onReset, originalName }) => {
 
+  // Downloads a single converted file using a temporary <a> DOM element
   const downloadFile = (id, filename) => {
     const url = `${baseURL}/api/download/${id}`;
     const link = document.createElement('a');
@@ -15,6 +25,7 @@ const ResultsDashboard = ({ results, loading, onReset, originalName }) => {
     link.remove();
   };
 
+  // Downloads all converted formats with a 400ms interval to prevent popup blocking
   const downloadAll = () => {
     if (!results || results.length === 0) return;
     results.forEach((res, index) => {
@@ -23,6 +34,7 @@ const ResultsDashboard = ({ results, loading, onReset, originalName }) => {
       }, index * 400);
     });
   };
+
 
   if (loading) {
     return (

@@ -1,10 +1,19 @@
 import React, { useState } from 'react';
 import { BsCloudUpload } from 'react-icons/bs';
 
+/**
+ * UploadZone - Interactive Drag-and-Drop / File Picker Component
+ * 
+ * Features:
+ * - HTML5 Drag and Drop event handlers (dragenter, dragover, dragleave, drop).
+ * - Client-side validation enforcing the 50MB file size limit.
+ * - Loading indicator with informative messaging during upload analysis.
+ */
 const UploadZone = ({ onUpload, loading }) => {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState('');
 
+  // Handle visual drag state transitions
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -16,6 +25,7 @@ const UploadZone = ({ onUpload, loading }) => {
     }
   };
 
+  // Handle files dropped directly into the zone
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -26,6 +36,7 @@ const UploadZone = ({ onUpload, loading }) => {
     }
   };
 
+  // Handle files selected via file dialog
   const handleChange = (e) => {
     e.preventDefault();
     if (loading) return;
@@ -34,6 +45,7 @@ const UploadZone = ({ onUpload, loading }) => {
     }
   };
 
+  // Validate file size and invoke parent upload callback
   const handleFiles = (files) => {
     const file = files[0];
     if (!file) return;
@@ -44,6 +56,7 @@ const UploadZone = ({ onUpload, loading }) => {
         setError("File exceeds 50MB limit.");
     }
   };
+
 
   return (
     <div 

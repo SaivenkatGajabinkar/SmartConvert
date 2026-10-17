@@ -4,21 +4,57 @@ import com.smartconvert.backend.model.ConversionResultEntity;
 import com.smartconvert.backend.model.FileEntity;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
+/**
+ * ConversionEngine - Core Multi-Format Document & Media Conversion Pipeline
+ * 
+ * Supported Libraries & Technologies:
+ * 1. Apache PDFBox: Parsing PDFs, extracting text, rendering PDF pages to images (PNG/JPG),
+ *    and generating paginated multi-page PDF documents.
+ * 2. Apache POI: Parsing and writing Microsoft Office documents (Word .docx, Excel .xlsx, PowerPoint .pptx).
+ * 3. Tesseract OCR (Tess4J): Optical Character Recognition to extract text from images.
+ * 4. Java ImageIO: Fast raster image decoding, format translation (PNG, JPG, BMP, WEBP, GIF).
+ * 5. Tabular & Structured Parsers: Transforming CSV <-> JSON <-> XML <-> XLSX <-> HTML tables.
+ * 6. Markdown Parser: Translating Markdown (.md) headings, paragraphs, and code blocks to HTML, PDF, and DOCX.
+ */
 @Service
 public class ConversionEngine {
 
     @Autowired
     private StorageService storageService;
 
+    /**
+     * Determines which output formats are compatible with an uploaded file based on
+     * its MIME type and file extension.
+     * 
+     * @param mimeType MIME content type (e.g. "application/pdf")
+     * @param filename Original uploaded filename (e.g. "data.csv")
+     * @return List of compatible target format strings
+     */
     public List<String> getAvailableFormats(String mimeType, String filename) {
         if (filename == null) filename = "unknown";
         if (mimeType == null) mimeType = "application/octet-stream";
@@ -43,10 +79,17 @@ public class ConversionEngine {
         } else if (mimeType.contains("presentation") || lowerFilename.endsWith(".pptx") || lowerFilename.endsWith(".ppt")) {
             return Arrays.asList("PDF", "TXT", "HTML");
         }
-        // Catch-all
+        // General catch-all fallback formats
         return Arrays.asList("ZIP", "TAR", "GZ", "PDF", "TXT");
     }
 
+    /**
+     * Executes batch conversions on the source file for all requested target formats.
+     * 
+     * @param fileEntity The source file metadata record
+     * @param targetFormats List of desired target formats (e.g. ["PDF", "TXT"])
+     * @return List of persisted ConversionResultEntity objects ready for download
+     */
     public List<ConversionResultEntity> convert(FileEntity fileEntity, List<String> targetFormats) throws Exception {
         File inputFile = storageService.getFile(fileEntity.getId());
         if (inputFile == null || !inputFile.exists()) {
@@ -54,6 +97,7 @@ public class ConversionEngine {
         }
         List<ConversionResultEntity> results = new ArrayList<>();
 
+        // Extract base name to create friendly output filenames (e.g. "report.docx" -> "report.pdf")
         String originalName = fileEntity.getOriginalFilename();
         String baseName = "converted_file";
         if (originalName != null && !originalName.isBlank()) {
@@ -67,12 +111,13 @@ public class ConversionEngine {
             String filename = fileEntity.getOriginalFilename() != null ? fileEntity.getOriginalFilename().toLowerCase() : "unknown";
             String mime = fileEntity.getMimeType() != null ? fileEntity.getMimeType().toLowerCase() : "";
 
+            // --- 1. Optical Character Recognition (OCR) for Images ---
             if (format.equals("TXT") && mime.contains("image")) {
-                // Tesseract OCR implementation
                 try {
                     net.sourceforge.tess4j.Tesseract tesseract = new net.sourceforge.tess4j.Tesseract();
                     tesseract.setDatapath("tessdata");
                     String text = tesseract.doOCR(inputFile);
+
                     try (PrintWriter out = new PrintWriter(outputFile)) {
                         out.println(text == null || text.trim().isEmpty() ? "No text found in image." : text);
                     }
@@ -557,6 +602,14 @@ public class ConversionEngine {
         return results;
     }
 
+    /**
+     * Converts raw text into a paginated PDF document using Apache PDFBox.
+     * 
+     * Pagination & Word-Wrapping Logic:
+     * - Breaks long lines exceeding 85 characters into wrapped sub-lines.
+     * - Limits lines per page to 45 lines, automatically allocating new PDF pages as needed.
+     * - Uses Standard 14 HELVETICA font with 14.5pt leading (line height).
+     */
     private void writeTextToPdf(String text, File outputFile) throws Exception {
         try (PDDocument doc = new PDDocument()) {
             String[] lines = text.split("\r?\n");
@@ -596,6 +649,16 @@ public class ConversionEngine {
         }
     }
 
+    /**
+     * Extracts plain text from an uploaded document for downstream AI or extractive summarization.
+     * 
+     * Handlers:
+     * - PDF: Uses PDFTextStripper from Apache PDFBox.
+     * - Image: Uses Tesseract OCR (Tess4J).
+     * - Word (.docx): Uses XWPFDocument paragraph iteration from Apache POI.
+     * - PowerPoint (.pptx): Uses XMLSlideShow text shape iteration from Apache POI.
+     * - Text / Code / CSV / JSON / Markdown: Uses native java.nio.file.Files.readString.
+     */
     public String extractText(FileEntity fileEntity) throws Exception {
         File inputFile = storageService.getFile(fileEntity.getId());
         if (inputFile == null || !inputFile.exists()) {

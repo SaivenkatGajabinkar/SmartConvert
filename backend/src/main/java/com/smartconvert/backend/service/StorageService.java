@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,9 +25,20 @@ import com.smartconvert.backend.repository.FileRepository;
 
 import jakarta.annotation.PostConstruct;
 
+/**
+ * StorageService - Manages physical file I/O, disk directories, and file lifecycle cleanup.
+ * 
+ * Key Responsibilities:
+ * 1. Directory Initialization (@PostConstruct): Creates upload folder upon application startup.
+ * 2. Uploaded File Persistence (storeFile): Writes raw multipart bytes to disk using unique UUID names.
+ * 3. Converted File Registration (storeConvertedFile): Saves conversion output metadata in the database.
+ * 4. Resource Streaming (loadAsResource): Resolves files from disk as Spring UrlResources for download.
+ * 5. Automated Garbage Collection (@Scheduled): Periodically purges files older than 10 minutes.
+ */
 @Service
 public class StorageService {
 
+    // Configurable upload directory path (defaults to "uploads" in working directory)
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
@@ -38,20 +50,30 @@ public class StorageService {
     @Autowired
     private ConversionResultRepository conversionResultRepository;
 
+    /**
+     * Initializes the physical upload directory as soon as the Spring Bean is constructed.
+     * Uses normalized absolute paths to ensure cross-platform compatibility (Windows & Linux).
+     */
     @PostConstruct
     public void init() {
         try {
             Path root = Paths.get(".").toAbsolutePath().normalize();
             this.resolvedUploadPath = root.resolve(uploadDir).toAbsolutePath();
             Files.createDirectories(resolvedUploadPath);
-            System.out.println(">>> Storage fully initialized at: " + resolvedUploadPath);
         } catch (IOException e) {
             throw new RuntimeException("Could not initialize upload directory: " + e.getMessage());
         }
     }
 
+    /**
+     * Stores an incoming multipart upload on disk and persists its metadata in the database.
+     * 
+     * Steps:
+     * 1. Creates a new FileEntity record in H2 to generate a unique UUID.
+     * 2. Writes the file bytes to disk using '<UUID>.<ext>' to guarantee no filename collisions.
+     * 3. Updates the FileEntity with the absolute storage path and saves it.
+     */
     public FileEntity storeFile(MultipartFile file) throws IOException {
-        // Emergency Check: Make sure the cupboard (folder) exists!
         if (!Files.exists(resolvedUploadPath)) {
             Files.createDirectories(resolvedUploadPath);
         }
@@ -66,7 +88,7 @@ public class StorageService {
         entity.setOriginalFilename(filename);
         entity.setMimeType(file.getContentType());
         
-        // Save to database
+        // Save to database first to obtain generated UUID
         try {
             entity = fileRepository.save(entity);
         } catch (Exception e) {
@@ -76,6 +98,7 @@ public class StorageService {
         String storedFilename = entity.getId() + extension;
         Path targetPath = resolvedUploadPath.resolve(storedFilename);
         
+        // Write the incoming input stream directly to disk
         try {
             Files.copy(file.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
@@ -86,10 +109,16 @@ public class StorageService {
         return fileRepository.save(entity);
     }
     
+    /**
+     * Overload to store conversion results using default filename.
+     */
     public ConversionResultEntity storeConvertedFile(String sourceId, File convertedFile, String format) {
         return storeConvertedFile(sourceId, convertedFile, format, convertedFile.getName());
     }
 
+    /**
+     * Persists conversion result metadata into the database with a human-friendly download name.
+     */
     public ConversionResultEntity storeConvertedFile(String sourceId, File convertedFile, String format, String friendlyFilename) {
         ConversionResultEntity entity = new ConversionResultEntity();
         entity.setSourceFileId(sourceId);
@@ -99,6 +128,9 @@ public class StorageService {
         return conversionResultRepository.save(entity);
     }
 
+    /**
+     * Retrieves an uploaded file from disk by its database ID.
+     */
     public File getFile(String id) {
         Optional<FileEntity> fileOpt = fileRepository.findById(id);
         if (fileOpt.isPresent() && fileOpt.get().getStoragePath() != null) {
@@ -107,6 +139,9 @@ public class StorageService {
         return null;
     }
 
+    /**
+     * Retrieves a converted file from disk by its conversion result ID.
+     */
     public File getConvertedFile(String resultId) {
         Optional<ConversionResultEntity> resultOpt = conversionResultRepository.findById(resultId);
         if (resultOpt.isPresent() && resultOpt.get().getStoragePath() != null) {
@@ -115,6 +150,9 @@ public class StorageService {
         return null;
     }
 
+    /**
+     * Loads a converted file as a Spring UrlResource for streaming downloads to the client browser.
+     */
     public Resource loadAsResource(String resultId) {
         try {
             Optional<ConversionResultEntity> resultOpt = conversionResultRepository.findById(resultId);
@@ -123,11 +161,11 @@ public class StorageService {
                 if (storagePath != null) {
                     Path directPath = Paths.get(storagePath);
                     if (Files.exists(directPath) && Files.isReadable(directPath)) {
-                        return new org.springframework.core.io.UrlResource(directPath.toUri());
+                        return new UrlResource(directPath.toUri());
                     }
                     Path fallback = resolvedUploadPath.resolve(directPath.getFileName());
                     if (Files.exists(fallback) && Files.isReadable(fallback)) {
-                        return new org.springframework.core.io.UrlResource(fallback.toUri());
+                        return new UrlResource(fallback.toUri());
                     }
                 }
             }
@@ -137,11 +175,20 @@ public class StorageService {
         }
     }
 
-    // Run every minute
+    /**
+     * Automated Cleanup Task (@Scheduled):
+     * Runs in the background once every 60 seconds (fixedRate = 60000ms).
+     * 
+     * Why is this important?
+     * - In a file conversion platform, uploaded and converted files consume disk storage rapidly.
+     * - This scheduler automatically removes files and records older than 10 minutes to keep
+     *   server disk usage minimal and prevent storage exhaustion on cloud servers.
+     */
     @Scheduled(fixedRate = 60000)
     public void cleanupOldFiles() {
         LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
         
+        // 1. Clean up old uploaded source files
         List<FileEntity> allFiles = new ArrayList<>();
         fileRepository.findAll().forEach(f -> {
             if (f.getUploadedAt().isBefore(tenMinutesAgo)) {
@@ -151,21 +198,27 @@ public class StorageService {
 
         for (FileEntity file : allFiles) {
             try {
-                Files.deleteIfExists(Paths.get(file.getStoragePath()));
+                if (file.getStoragePath() != null) {
+                    Files.deleteIfExists(Paths.get(file.getStoragePath()));
+                }
                 fileRepository.delete(file);
             } catch (IOException e) {
-                // Ignore
+                // Silently ignore if file was already removed
             }
         }
 
+        // 2. Clean up old converted result files
         List<ConversionResultEntity> oldResults = conversionResultRepository.findByConvertedAtBefore(tenMinutesAgo);
         for (ConversionResultEntity res : oldResults) {
             try {
-                Files.deleteIfExists(Paths.get(res.getStoragePath()));
+                if (res.getStoragePath() != null) {
+                    Files.deleteIfExists(Paths.get(res.getStoragePath()));
+                }
                 conversionResultRepository.delete(res);
             } catch (IOException e) {
-                // Ignore
+                // Silently ignore if file was already removed
             }
         }
     }
 }
+

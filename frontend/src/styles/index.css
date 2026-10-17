@@ -383,46 +383,70 @@ h1.display-4 {
 }
 
 /* History Dashboard Premium Table */
+.history-table-wrapper,
 .table-responsive {
   border-radius: var(--radius-md);
   border: 1px solid var(--card-border);
   overflow: hidden;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.01);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  background: rgba(13, 17, 34, 0.6) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .table-custom {
-  background: transparent !important;
-  margin-bottom: 0;
+  --bs-table-bg: transparent !important;
+  --bs-table-color: var(--text-main) !important;
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.04) !important;
+  --bs-table-hover-color: #ffffff !important;
+  --bs-table-border-color: rgba(255, 255, 255, 0.08) !important;
+  --bs-table-striped-bg: transparent !important;
+  background-color: transparent !important;
+  color: var(--text-main) !important;
+  margin-bottom: 0 !important;
+}
+
+.table-custom > :not(caption) > * > * {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  color: var(--text-main) !important;
 }
 
 .table-custom thead {
   background: rgba(255, 255, 255, 0.04) !important;
 }
 
+.table-custom thead th,
 .table-custom th {
-  color: var(--text-muted) !important;
-  font-weight: 600;
+  color: #94a3b8 !important;
+  font-weight: 700;
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 1px;
-  padding: 1.35rem 1.25rem !important;
-  border-bottom: 1px solid var(--card-border) !important;
+  padding: 1.25rem 1.25rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  box-shadow: none !important;
 }
 
+.table-custom tbody td,
 .table-custom td {
-  padding: 1.35rem 1.25rem !important;
-  border-bottom: 1px solid var(--card-border) !important;
+  padding: 1.25rem 1.25rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
   color: var(--text-main) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .table-custom tbody tr {
-  background: transparent !important;
+  background-color: transparent !important;
   transition: all 0.25s ease;
 }
 
-.table-custom tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03) !important;
+.table-custom tbody tr:hover > * {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
 }
 
 /* Badge Cosmetics */

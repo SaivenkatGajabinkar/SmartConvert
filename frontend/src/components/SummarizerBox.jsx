@@ -2,8 +2,18 @@ import React from 'react';
 import { Button, Spinner, Badge } from 'react-bootstrap';
 import { BsStars, BsFileTextFill, BsShieldCheck } from 'react-icons/bs';
 
+/**
+ * SummarizerBox - AI & Local Document Summarization Card
+ * 
+ * Features:
+ * - Triggers text extraction and document summarization (/api/summarize/{fileId}).
+ * - Displays badges indicating whether the summary was produced by Cloud Gemini AI
+ *   or Offline Privacy Mode.
+ * - Allows regenerating or reviewing summaries without re-uploading.
+ */
 const SummarizerBox = ({ onSummarize, loading, result }) => {
   const isLocal = result?.type && result.type.includes("Local");
+
 
   return (
     <div className="summary-card-container p-4 mb-4">
